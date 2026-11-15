@@ -1,0 +1,32 @@
+name: Build firmware
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: qmkfm/qmk_cli
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate keymap JSON
+        run: python3 build_keymap.py
+
+      - name: Fetch QMK firmware
+        run: |
+          git clone --depth 1 https://github.com/qmk/qmk_firmware /qmk_firmware
+          cd /qmk_firmware && make git-submodule
+
+      - name: Compile
+        working-directory: /qmk_firmware
+        run: |
+          qmk compile "$GITHUB_WORKSPACE/bear65_gram.json"
+          cp /qmk_firmware/*.hex "$GITHUB_WORKSPACE/"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bear65-firmware
+          path: "*.hex"
